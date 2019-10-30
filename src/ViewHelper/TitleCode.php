@@ -53,7 +53,7 @@ class TitleCode extends AbstractHelper
         } elseif (preg_match('/Sportpsychologe/', $title)) {
             $titleCode=100518;
         } elseif (preg_match('/(Facharzt|Oberarzt)/', $title)) {
-            $titleCode=guessTitleCodeForFacharzt($title);
+            $titleCode=$this->guessTitleCodeForFacharzt($title);
         }
         return $titleCode;
     }
