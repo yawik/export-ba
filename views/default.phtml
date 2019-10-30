@@ -1,0 +1,128 @@
+<?php
+
+use ExportBA\Entity\JobMetaData;
+
+echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
+<HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Header>
+    <SupplierId><?=$supplierId?></SupplierId>
+    <Timestamp><?=date("Y-m-d\TH:i:s\Z")?></Timestamp>
+    <Amount><?=count($jobs)?></Amount>
+    <TypeOfLoad>D</TypeOfLoad>
+  </Header>
+  <Data>
+    <?php $ItemsToDelete = [] ?>
+<?php /** @var \Jobs\Entity\Job $job */ foreach ($jobs as $job):
+    $meta = JobMetaData::fromJob($job); ?>
+    <?php if ($job->isActive() && $meta->mustProcess()):?>
+    <JobPositionPosting>
+        <JobPositionPostingId><?=$partnerNr . '-' . $job->getId() . '-S'?></JobPositionPostingId>
+        <HiringOrg>
+            <HiringOrgName><![CDATA[<?php echo mb_substr($job->getOrganization()->getOrganizationName()->getName(),0, 90) ?>]]></HiringOrgName>
+            <Contact>
+                <Salutation>1</Salutation>
+                <FamilyName>Personalabteilung</FamilyName>
+            </Contact>
+    	</HiringOrg>
+
+       <PostDetail>
+
+       <?php if ($date = $job->getDatePublishStart()):?>
+           <StartDate><?=$date->format('c')?></StartDate>
+        <?php endif?>
+        <?php if ($date = $job->getDatePublishEnd()):?>
+           <EndDate><?=$date->format('c')?></EndDate>
+        <?php endif?>
+        <?php if ($date = $job->getDateModified()):?>
+           <LastModificationDate><?=$date->format('c')?></LastModificationDate>
+        <?php endif?>
+           <Status>1</Status>
+           <Action><?=$meta->isOnline() ? 2 : 1?></Action>
+           <SupplierId><?=$supplierId?></SupplierId>
+           <SupplierName>stellenmarkt.de</SupplierName>
+           <SupplierIndustrie>1</SupplierIndustrie>
+<?php if ($link = $job->getLink()): ?>
+           <InternetReference><![CDATA[<?=mb_substr($link, 0, 200)?>]]></InternetReference>
+<?php endif; ?>
+
+           <PostedBy>
+                <Contact>
+                    <Company><![CDATA[<?=mb_substr($job->getOrganization()->getOrganizationName()->getName(),0,90)?>]]></Company>
+                    <JobContactWebSite><![CDATA[<?=$link ? mb_substr($link, 0, 200) : ''?>]]></JobContactWebSite>
+                </Contact>
+            </PostedBy>
+
+        </PostDetail>
+        <?php /*
+               * @todo work that out!
+               */
+
+	$titleCodeDefault=14279;
+
+        ?>
+
+        <JobPositionInformation>
+            <JobPositionTitle>
+                <TitleCode><?=$this->titleCode($job->getTitle())?></TitleCode>
+            </JobPositionTitle>
+
+            <JobPositionTitleDescription><![CDATA[<?=mb_substr($job->getTitle(),0, 58)?>]]></JobPositionTitleDescription>
+            <JobOfferType>1</JobOfferType>
+            <SocialInsurance>1</SocialInsurance>
+
+<?php if ($description = $job->getTemplateValues()->getDescription()):?>
+            <Objective><![CDATA[<?=mb_substr($description, 0, 3995)?>]]></Objective>
+<?php endif; ?>
+            <EducationAuthorisation>1</EducationAuthorisation>
+             <JobPositionDescription>
+                 <?php $locations = $job->getLocations(); if (count($locations)):?>
+                <JobPositionLocation>
+                    <?php /** @var \Jobs\Entity\Location $location */ foreach ($locations as $i => $location):?>
+                    <Location>
+                        <CountryCode><?php echo $location->getCountry() ?></CountryCode>
+                        <PostalCode><?php echo $location->getPostalCode() ?></PostalCode>
+                        <Municipality><![CDATA[<?=substr($location->getCity(),0,35) ?>]]></Municipality>
+                    </Location>
+                    <?php endforeach?>
+                </JobPositionLocation>
+                 <?php else: ?>
+                     <JobPositionLocation>
+                         <Location><CountryCode>DE</CountryCode></Location>
+                     </JobPositionLocation>
+                  <?php endif ?>
+                <Application>
+                    <KindOfApplication>6</KindOfApplication>
+                </Application>
+                <Classification>
+                    <Schedule>
+                        <WorkingPlan>1</WorkingPlan>
+                    </Schedule>
+                </Classification>
+             </JobPositionDescription>
+            <JobPositionRequirements>
+                <QualificationsRequired>
+                    <EducationQualifs>
+                        <EduDegree>15</EduDegree>
+                    </EducationQualifs>
+                </QualificationsRequired>
+            </JobPositionRequirements>
+            <NumberToFill><?= count($locations)?></NumberToFill>
+            <AssignmentStartDate><?=date_format(date_add(date_create(date("Y-m-d")),date_interval_create_from_date_string('30 days')),"Y-m-d")?></AssignmentStartDate>
+        </JobPositionInformation>
+    </JobPositionPosting>
+    <?php $meta->commit()->storeIn($job); $this->processed->count++;else:?>
+    <?php if (!$meta->isNew() && !$meta->isOffline() && $meta->mustProcess()):
+        $ItemsToDelete[] = $partnerNr . '-' . $job->getId() . '-S';
+        $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Job is expired.')->commit()->storeIn($job);
+        $this->processed->count++;
+    endif;?>
+    <?php endif; ?>
+
+<?php endforeach; ?>
+    <?php foreach ($ItemsToDelete as $item):?>
+      <DeleteEntry>
+        <EntryId><?=$item?></EntryId>
+      </DeleteEntry>
+    <?php endforeach; ?>
+  </Data>
+</HRBAXMLJobPositionPosting>

@@ -1,0 +1,138 @@
+<?php
+
+use ExportBA\Entity\JobMetaData;
+
+echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
+<HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Header>
+    <SupplierId><?=$supplierId?></SupplierId>
+    <Timestamp><?=date("Y-m-d\TH:i:s\Z")?></Timestamp>
+    <Amount><?=count($jobs)?></Amount>
+    <TypeOfLoad>D</TypeOfLoad>
+  </Header>
+  <Data>
+    <?php $ItemsToDelete = [] ?>
+<?php foreach ($jobs as $job):
+  $meta = JobMetaData::fromJob($job);
+  if ($meta->isNew() || $meta->isOnline()):?>
+
+    <JobPositionPosting>
+        <JobPositionPostingId><?=$partnerNr . '-' . $item['id'] . '-S'?></JobPositionPostingId>
+<?php
+if (isset($item['company'])):
+?>
+        <HiringOrg>
+            <HiringOrgName><![CDATA[<?php echo mb_substr($item['company']['name'],0, 90) ?>]]></HiringOrgName>
+            <ProfileWebSite><![CDATA[<?php echo mb_substr($item['company']['profile_url'], 0, 80) ?>]]></ProfileWebSite>
+            <Contact>
+                <Salutation>1</Salutation>
+                <FamilyName>Personalabteilung</FamilyName>
+            </Contact>
+	</HiringOrg>
+<?php endif; ?>
+       <PostDetail>
+<?php if (isset($item['detail']['date_start'])): ?>
+           <StartDate><?=$item['detail']['date_start']?></StartDate>
+<?php endif; ?>
+<?php if (isset($item['detail']['date_end'])): ?>
+           <EndDate><?=$item['detail']['date_end']?></EndDate>
+<?php endif; ?>
+<?php if (isset($item['detail']['date_modified'])): ?>
+           <LastModificationDate><?=$item['detail']['date_modified']?></LastModificationDate>
+<?php endif; ?>
+           <Status>1</Status>
+           <Action><?=$item['detail']['action']?></Action>
+           <SupplierId><?=$supplierId?></SupplierId>
+           <SupplierName>absolventa</SupplierName>
+           <SupplierIndustrie>1</SupplierIndustrie>
+<?php if (array_key_exists('link', $item)): ?>
+           <InternetReference><![CDATA[<?=mb_substr($item['link'], 0, 200)?>]]></InternetReference>
+<?php endif; ?>
+<?php if (array_key_exists('company', $item)): ?>
+           <PostedBy>
+                <Contact>
+                    <Company><![CDATA[<?=mb_substr($item['company']['name'],0,90)?>]]></Company>
+                    <JobContactWebSite><![CDATA[<?=mb_substr($item['link'], 0, 200)?>]]></JobContactWebSite>
+                </Contact>
+            </PostedBy>
+<?php endif; ?>
+        </PostDetail>
+        <?php /*
+               * @todo work that out!
+  */
+if ('1' == $item['type'] ) {
+	$titleCodeDefault=14279;
+}else{
+	$titleCodeDefault=13861;
+}
+
+        ?>
+        <JobPositionInformation>
+            <JobPositionTitle>
+                <TitleCode><?=isset($item['bkz']) ? $item['bkz'] : $titleCodeDefault ?></TitleCode>
+            </JobPositionTitle>
+<?php if (array_key_exists('title', $item)): ?>
+            <JobPositionTitleDescription><![CDATA[<?=mb_substr($item['title'],0, 58)?>]]></JobPositionTitleDescription>
+<?php endif; ?>
+            <JobOfferType><?=$item['type']=='a'?'4':$item['type']?></JobOfferType>
+            <?php if('a' != $item['type'] and '4' != $item['type']):?>
+            <SocialInsurance>1</SocialInsurance>
+            <?php endif;?>
+<?php if (array_key_exists('description', $item)): ?>
+            <Objective><![CDATA[<?=mb_substr($item['description'], 0, 3995)?>]]></Objective>
+<?php endif; ?>
+            <EducationAuthorisation>1</EducationAuthorisation>
+             <JobPositionDescription>
+                 <?php if (isset($item['locations'])):?>
+                <JobPositionLocation>
+                    <?php foreach ($item['locations'] as $i => $location):?>
+                    <Location>
+                        <?php if (isset($location['country'])):?>
+                        <CountryCode><?php echo $location['country'] ?></CountryCode>
+                        <?php endif ?>
+                        <?php if (isset($location['zip_code'])):?>
+                            <?php $postalCode=explode(',',$location['zip_code']) ?>
+                            <PostalCode><?php echo $postalCode[0] ?></PostalCode>
+                        <?php endif ?>
+                        <?php if (isset($location['city'])):?>
+                          <Municipality><![CDATA[<?=mb_substr($location['city'], 0, 35) ?>]]></Municipality>
+                        <?php endif ?>
+                    </Location>
+                    <?php endforeach?>
+                </JobPositionLocation>
+                 <?php else: ?>
+                     <JobPositionLocation>
+                         <Location><CountryCode>DE</CountryCode></Location>
+                     </JobPositionLocation>
+                  <?php endif ?>
+                <Application>
+                    <KindOfApplication>6</KindOfApplication>
+                </Application>
+                <Classification>
+                    <Schedule>
+                        <WorkingPlan>1</WorkingPlan>
+                    </Schedule>
+                </Classification>
+             </JobPositionDescription>
+            <JobPositionRequirements>
+                <QualificationsRequired>
+                    <EducationQualifs>
+                        <EduDegree>15</EduDegree>
+                    </EducationQualifs>
+                </QualificationsRequired>
+            </JobPositionRequirements>
+            <NumberToFill><?= isset($item['locations'])?count($item['locations']):1 ?></NumberToFill>
+            <AssignmentStartDate><?=(empty($item['detail']['date_apprenticeship_start'])?date_format(date_add(date_create(date("Y-m-d")),date_interval_create_from_date_string('30 days')),"Y-m-d"):$item['detail']['date_apprenticeship_start'])?></AssignmentStartDate>
+        </JobPositionInformation>
+    </JobPositionPosting>
+  <?php else if(!$job->isOnline()): ?>
+    <?php $ItemsToDelete[] = $partnerNr . '-' . $item['id'] . '-S'; ?>
+  <?php endif; ?>
+<?php endforeach; ?>
+    <?php foreach ($ItemsToDelete as $item):?>
+      <DeleteEntry>
+        <EntryId><?=$item?></EntryId>
+      </DeleteEntry>
+    <?php endforeach; ?>
+  </Data>
+</HRBAXMLJobPositionPosting>
