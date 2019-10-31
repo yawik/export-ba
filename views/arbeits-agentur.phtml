@@ -122,7 +122,12 @@ if ('1' == $item['type'] ) {
                 </QualificationsRequired>
             </JobPositionRequirements>
             <NumberToFill><?= isset($item['locations'])?count($item['locations']):1 ?></NumberToFill>
-            <AssignmentStartDate><?=(empty($item['detail']['date_apprenticeship_start'])?date_format(date_add(date_create(date("Y-m-d")),date_interval_create_from_date_string('30 days')),"Y-m-d"):$item['detail']['date_apprenticeship_start'])?></AssignmentStartDate>
+            <AssignmentStartDate><?=date
+
+
+            (empty($item['detail']['date_apprenticeship_start'])?
+            date_format(date_add(date_create(date("Y-m-d")),date_interval_create_from_date_string('30 days')),"Y-m-d")
+            :$item['detail']['date_apprenticeship_start'])?></AssignmentStartDate>
         </JobPositionInformation>
     </JobPositionPosting>
   <?php else if(!$job->isOnline()): ?>

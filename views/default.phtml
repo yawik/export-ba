@@ -32,10 +32,10 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
        <PostDetail>
 
        <?php if ($date = $job->getDatePublishStart()):?>
-           <StartDate><?=$date->format('c')?></StartDate>
+           <StartDate><?=$date->format('Y-m-d')?></StartDate>
         <?php endif?>
         <?php if ($date = $job->getDatePublishEnd()):?>
-           <EndDate><?=$date->format('c')?></EndDate>
+           <EndDate><?=$date->format('Y-m-d')?></EndDate>
         <?php endif?>
         <?php if ($date = $job->getDateModified()):?>
            <LastModificationDate><?=$date->format('c')?></LastModificationDate>
@@ -57,14 +57,6 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
             </PostedBy>
 
         </PostDetail>
-        <?php /*
-               * @todo work that out!
-               */
-
-	$titleCodeDefault=14279;
-
-        ?>
-
         <JobPositionInformation>
             <JobPositionTitle>
                 <TitleCode><?=$this->titleCode($job->getTitle())?></TitleCode>
@@ -111,7 +103,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                 </QualificationsRequired>
             </JobPositionRequirements>
             <NumberToFill><?= count($locations)?></NumberToFill>
-            <AssignmentStartDate><?=date_format(date_add(date_create(date("Y-m-d")),date_interval_create_from_date_string('30 days')),"Y-m-d")?></AssignmentStartDate>
+            <AssignmentStartDate><?=date('Y-m-d', time() + 24*60*60)?>
         </JobPositionInformation>
     </JobPositionPosting>
     <?php $meta->commit()->storeIn($job); $this->processed->count++;else:?>
