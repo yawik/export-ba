@@ -75,7 +75,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                 <JobPositionLocation>
                     <?php /** @var \Jobs\Entity\Location $location */ foreach ($locations as $i => $location):?>
                     <Location>
-                        <CountryCode><?php echo $location->getCountry() ?></CountryCode>
+                        <CountryCode>DE</CountryCode>
                         <PostalCode><?php echo $location->getPostalCode() ?></PostalCode>
                         <Municipality><![CDATA[<?=substr($location->getCity(),0,35) ?>]]></Municipality>
                     </Location>
@@ -103,7 +103,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                 </QualificationsRequired>
             </JobPositionRequirements>
             <NumberToFill><?= count($locations)?></NumberToFill>
-            <AssignmentStartDate><?=date('Y-m-d', time() + 24*60*60)?>
+            <AssignmentStartDate><?=date('Y-m-d', time() + 24*60*60)?></AssignmentStartDate>
         </JobPositionInformation>
     </JobPositionPosting>
     <?php $meta->commit()->storeIn($job); $this->processed->count++;else:?>
