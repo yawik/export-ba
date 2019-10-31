@@ -36,7 +36,7 @@ return [
             'routes' => [
                 'export-ba:upload' => [
                     'options' => [
-                        'route' => 'export-ba upload <name>',
+                        'route' => 'export-ba upload <name> [--file=]',
                         'defaults' => [
                             'controller' => Controller\UploadConsoleController::class,
                             'action' => 'index',

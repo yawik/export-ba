@@ -76,7 +76,6 @@ class AaClient
 
     public function setUrl($path)
     {
-        $this->open();
         $url = $this->url . '/' . ltrim($path, '/');
 
         curl_setopt($this->curl, CURLOPT_URL, $url);

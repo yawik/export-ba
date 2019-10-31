@@ -40,20 +40,25 @@ class UploadConsoleController extends AbstractConsoleController
     public function indexAction()
     {
         $name = $this->params('name');
+        $file = $this->params('file', null);
 
-        $jobs = $this->plugin(JobFetcher::class, ['name' => $name])->fetch();
+        if (!$file) {
+            $jobs = $this->plugin(JobFetcher::class, ['name' => $name])->fetch();
 
-        if (!count($jobs)) {
-            echo "No jobs found." . PHP_EOL;
-            return;
-        }
-        echo count($jobs) . 'found.' . PHP_EOL;
+            if (!count($jobs)) {
+                echo "No jobs found." . PHP_EOL;
+                return;
+            }
+            echo count($jobs) . 'found.' . PHP_EOL;
 
-        $files = $this->plugin(AaXml::class, ['name' => $name])->write($jobs);
+            $files = $this->plugin(AaXml::class, ['name' => $name])->write($jobs);
 
-        if ($files === false) {
-            echo "No jobs processed. All fine." . PHP_EOL;
-            return;
+            if ($files === false) {
+                echo "No jobs processed. All fine." . PHP_EOL;
+                return;
+            }
+        } else {
+            $files = [$file];
         }
 
         $this->client->open($name);

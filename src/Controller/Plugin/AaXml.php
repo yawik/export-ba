@@ -63,7 +63,7 @@ class AaXml extends AbstractPlugin
             mkdir($this->path, 0777, true);
         }
 
-        $file = $this->path . 'DS' . $this->supplierId . '_' . date('Y-m-d_H-i-s') . '_D001.XML';
+        $file = $this->path . 'DS' . $this->supplierId . '_' . date('Y-m-d_H-i-s') . '_D000E.XML';
         file_put_contents($file, $content);
 
         return [$file];

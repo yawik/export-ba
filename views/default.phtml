@@ -1,6 +1,7 @@
 <?php
 
 use ExportBA\Entity\JobMetaData;
+use ExportBA\Filter\JobId;
 
 echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
 <HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -16,9 +17,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
     $meta = JobMetaData::fromJob($job); ?>
     <?php if ($job->isActive() && $meta->mustProcess()):?>
     <JobPositionPosting>
-        <JobPositionPostingId><?=$partnerNr . '-' . $job->getId() . '-S'?></JobPositionPostingId>
+        <JobPositionPostingId><?=JobId::toAaId($job->getId(), $partnerNr)?></JobPositionPostingId>
         <HiringOrg>
             <HiringOrgName><![CDATA[<?php echo mb_substr($job->getOrganization()->getOrganizationName()->getName(),0, 90) ?>]]></HiringOrgName>
+            <Industry>
+                <NAICS>86.10.1</NAICS>
+            </Industry>
             <Contact>
                 <Salutation>1</Salutation>
                 <FamilyName>Personalabteilung</FamilyName>
