@@ -45,7 +45,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
            <LastModificationDate><?=$date->format('c')?></LastModificationDate>
         <?php endif?>
            <Status>1</Status>
-           <Action><?=$meta->isOnline() ? 2 : 1?></Action>
+           <Action><?=2 //$meta->isOnline() ? 2 : 1?></Action>
            <SupplierId><?=$supplierId?></SupplierId>
            <SupplierName>stellenmarkt.de</SupplierName>
            <SupplierIndustrie>1</SupplierIndustrie>
@@ -64,10 +64,10 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
         <JobPositionInformation>
             <JobPositionTitle>
             <?php if (isset($extraData['JobPositionTitle']['TitleCode'])): ?>
+                <TitleCode><?=$extraData['JobPositionTitle']['TitleCode']?></TitleCode>
                 <?php if (isset($extraData['JobPositionTitle']['Degree'])): ?>
                 <Degree><?=$extraData['JobPositionTitle']['Degree']?></Degree>
                 <?php endif ?>
-                <TitleCode><?=$extraData['JobPositionTitle']['TitleCode']?></TitleCode>
             <?php else: ?>
 
                 <TitleCode><?=$this->titleCode($job->getTitle())?></TitleCode>
@@ -87,7 +87,11 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                  <?php if (isset($extraData['Location'])): ?>
                  <JobPositionLocation>
                     <Location>
-                        <?php foreach ($extraData['Location'] as $tag => $v) { echo "<$tag>$v</$tag>"; } ?>
+                        <?php foreach (['CountryCode', 'Region', 'PostalCode', 'City' => 'Municipality'] as $name => $tag):
+                            if (!isset($extraData['Location'][$name])) { continue; }
+                            if (is_numeric($tag)) { $tag = $name; }
+                            echo "<$tag>" . $extraData['Location'][$name] . "</$tag>";
+                        endforeach ?>
                     </Location>
                  </JobPositionLocation>
                 <?php else: $locations = $job->getLocations(); if (count($locations)):?>
