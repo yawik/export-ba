@@ -49,9 +49,10 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
            <SupplierId><?=$supplierId?></SupplierId>
            <SupplierName>stellenmarkt.de</SupplierName>
            <SupplierIndustrie>1</SupplierIndustrie>
-<?php if ($link = $job->getLink()): ?>
+<?php $link = 'https://stellenmarkt.com/de/job-' . $job->getId() . '.html';
+    //if ($link = $job->getLink()): ?>
            <InternetReference><![CDATA[<?=mb_substr($link, 0, 200)?>]]></InternetReference>
-<?php endif; ?>
+<?php //endif; ?>
 
            <PostedBy>
                 <Contact>
