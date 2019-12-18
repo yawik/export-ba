@@ -1,7 +1,10 @@
 <?php
 
 use ExportBA\Entity\JobMetaData;
+use ExportBA\Entity\JobMetaStatus;
+use ExportBA\Entity\SimpleImportMetaDataProxy;
 use ExportBA\Filter\JobId;
+use SimpleImport\Entity\JobMetaData as SIData;
 
 echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
 <HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
@@ -14,8 +17,12 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
   <Data>
     <?php $ItemsToDelete = [] ?>
 <?php /** @var \Jobs\Entity\Job $job */ foreach ($jobs as $job):
-    $meta = JobMetaData::fromJob($job);
-    $extraData = $job->getMetaData('simpleimport-extra');?>
+    /** @var JobMetaData $meta */
+    $meta = $job->getAttachedEntity(JobMetaData::class);
+    if (!$meta) {
+        $meta = $job->createAttachedEntity(JobMetaData::class, ['jobId' => $job->getId(), 'status' => 'new']);
+    }
+    $extraData = (new SimpleImportMetaDataProxy($job))->getData();?>
     <?php if ($job->isActive() && $meta->mustProcess()):?>
     <JobPositionPosting>
         <JobPositionPostingId><?=JobId::toAaId($job->getId(), $partnerNr)?></JobPositionPostingId>
@@ -143,10 +150,10 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
             <AssignmentStartDate><?=$extraData['AssignmentStartDate'] ?? date('Y-m-d', time() + 24*60*60)?></AssignmentStartDate>
         </JobPositionInformation>
     </JobPositionPosting>
-    <?php $meta->commit()->storeIn($job); $this->processed->count++;else:?>
-    <?php if (!$meta->isNew() && !$meta->isOffline() && $meta->mustProcess()):
+    <?php $meta->commit(); $this->processed->count++;else:?>
+    <?php if (!$meta->hasStatus('new') && !$meta->hasStatus(JobMetaStatus::OFFLINE) && $meta->mustProcess()):
         $ItemsToDelete[] = $partnerNr . '-' . $job->getId() . '-S';
-        $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Job is expired.')->commit()->storeIn($job);
+        $meta->updateStatus(JobMetaStatus::OFFLINE, 'Job is expired.')->commit();
         $this->processed->count++;
     endif;?>
     <?php endif; ?>

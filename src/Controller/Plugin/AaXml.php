@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\Controller\Plugin;
 
+use ExportBA\Repository\JobMetaRepository;
 use Zend\Mvc\Controller\Plugin\AbstractPlugin;
 use Zend\View\Renderer\RendererInterface;
 
