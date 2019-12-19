@@ -100,7 +100,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
             <JobOfferType>1</JobOfferType>
             <SocialInsurance><?=$extraData['SocialInsurance'] ?? 1?></SocialInsurance>
 
-<?php if ($description = $job->getTemplateValues()->getDescription()):?>
+<?php if ($description = $job->getTemplateValues()->getHtml()):?>
             <Objective><![CDATA[<?=mb_substr($description, 0, 3995)?>]]></Objective>
 <?php endif; ?>
             <EducationAuthorisation>1</EducationAuthorisation>
@@ -109,8 +109,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                  <JobPositionLocation>
                     <Location>
                         <?php foreach (['CountryCode', 'Region', 'PostalCode', 'City' => 'Municipality'] as $name => $tag):
+                            if (is_numeric($name)) { $name = $tag; }
                             if (!isset($extraData['Location'][$name])) { continue; }
-                            if (is_numeric($tag)) { $tag = $name; }
                             echo "<$tag>" . $extraData['Location'][$name] . "</$tag>";
                         endforeach ?>
                     </Location>

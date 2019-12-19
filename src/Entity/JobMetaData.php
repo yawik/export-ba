@@ -40,7 +40,7 @@ class JobMetaData implements
     public const STATUS_ENTITY_CLASS = JobMetaStatus::class;
 
     /**
-     * @ODM\Collection
+     * @ODM\Field(type="collection")
      * @var array
      */
     private $messages = [];

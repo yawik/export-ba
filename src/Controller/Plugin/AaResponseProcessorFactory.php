@@ -11,32 +11,25 @@
 declare(strict_types=1);
 namespace ExportBA\Controller\Plugin;
 
+use ExportBA\Client\AaClient;
 use ExportBA\Entity\FileQueue;
+use ExportBA\Entity\JobMetaData;
 use ExportBA\Options\AaOptions;
 use Interop\Container\ContainerInterface;
-use Zend\View\Renderer\PhpRenderer;
 
 /**
- * Factory for \ExportBA\Controller\Plugin\AaXml
+ * Factory for \ExportBA\Controller\Plugin\AaResponseProcessor
  *
  * @author Mathias Gelhausen <gelhausen@cross-solution.de>
  * TODO: write tests
  */
-class AaXmlFactory
+class AaResponseProcessorFactory
 {
     public function __invoke(
         ContainerInterface $container,
         ?string $requestedName = null,
         ?array $options = null
-    ): AaXml {
-
-        $renderer = new PhpRenderer();
-        $resolver = new \Zend\View\Resolver\TemplateMapResolver(
-            $container->get('config')['view_manager']['template_map']
-        );
-        $renderer->setResolver($resolver);
-        $renderer->setHelperPluginManager($container->get('ViewHelperManager'));
-
+    ): AaResponseProcessor {
         $aaOptions = $container->get(AaOptions::class);
 
         /** @var \ExportBA\Repository\FileQueuesRepository $queues */
@@ -45,14 +38,12 @@ class AaXmlFactory
         if (!$queue) {
             $queue = $queues->create(['name' => $options['name']], true);
         }
-
-        return new AaXml(
-            $renderer,
+        return new AaResponseProcessor(
+            $container->get(AaClient::class),
             $queue,
+            $options['name'],
             $aaOptions->getSupplierId($options['name']),
-            $aaOptions->getPartnerNr($options['name']),
-            $aaOptions->getTemplate($options['name']),
-            $aaOptions->getCachePath() . DIRECTORY_SEPARATOR . $options['name']
+            $container->get('repositories')->get(JobMetaData::class)
         );
     }
 }

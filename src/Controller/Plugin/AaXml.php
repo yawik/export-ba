@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\Controller\Plugin;
 
+use ExportBA\Entity\FileQueue;
 use ExportBA\Repository\JobMetaRepository;
 use Zend\Mvc\Controller\Plugin\AbstractPlugin;
 use Zend\View\Renderer\RendererInterface;
@@ -25,14 +26,22 @@ use Zend\View\Renderer\RendererInterface;
 class AaXml extends AbstractPlugin
 {
     private $renderer;
+    private $queue;
     private $supplierId;
     private $partnerNr;
     private $template;
     private $path;
 
-    public function __construct(RendererInterface $renderer, $supplierId, $partnerNr, $template, $path)
-    {
+    public function __construct(
+        RendererInterface $renderer,
+        FileQueue $queue,
+        $supplierId,
+        $partnerNr,
+        $template,
+        $path
+    ) {
         $this->renderer = $renderer;
+        $this->queue = $queue;
         $this->supplierId = $supplierId;
         $this->partnerNr = $partnerNr;
         $this->template = $template;
@@ -66,7 +75,7 @@ class AaXml extends AbstractPlugin
 
         $file = $this->path . 'DS' . $this->supplierId . '_' . date('Y-m-d_H-i-s') . '_D000E.XML';
         file_put_contents($file, $content);
-
+        $this->queue->push($file);
         return [$file];
     }
 }

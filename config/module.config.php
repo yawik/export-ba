@@ -43,6 +43,15 @@ return [
                         ],
                     ],
                 ],
+                'export-ba:download' => [
+                    'options' => [
+                        'route' => 'export-ba download <name>',
+                        'defaults' => [
+                            'controller' => Controller\DownloadController::class,
+                            'action' => 'index',
+                        ],
+                    ],
+                ],
             ],
         ],
     ],
@@ -57,6 +66,7 @@ return [
     'controllers' => [
         'factories' => [
             Controller\UploadConsoleController::class => Controller\UploadConsoleControllerFactory::class,
+            Controller\DownloadController::class => InvokableFactory::class,
         ],
     ],
 
@@ -64,6 +74,7 @@ return [
         'factories' => [
             Controller\Plugin\JobFetcher::class => Controller\Plugin\JobFetcherFactory::class,
             Controller\Plugin\AaXml::class => Controller\Plugin\AaXmlFactory::class,
+            Controller\Plugin\AaResponseProcessor::class => Controller\Plugin\AaResponseProcessorFactory::class,
         ],
     ],
 
