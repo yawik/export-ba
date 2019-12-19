@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace ExportBA\JobFetcher;
 
 use ExportBA\Entity\JobMetaData;
+use ExportBA\Entity\JobMetaStatus;
 use Jobs\Entity\StatusInterface;
 use Jobs\Repository\Job;
 
@@ -42,15 +43,33 @@ class OrganizationJobFetcher implements JobFetcherInterface
             StatusInterface::EXPIRED,
             StatusInterface::INACTIVE,
         ]);
-        $qb->addOr(
-            $qb->expr()->field('metaData.exportBA')->exists(false),
-            $qb->expr()->field('metaData.exportBA.status')->notIn([
-                JobMetaData::STATUS_ERROR,
-                JobMetaData::STATUS_PENDING_OFFLINE,
-                JobMetaData::STATUS_PENDING_ONLINE,
-            ])
-        );
 
-        return $qb->getQuery()->execute();
+
+        $jobs = [];
+        /** @var \Jobs\Entity\Job $job */
+        foreach ($qb->getQuery()->execute() as $job) {
+            /** @var JobMetaData $jobMeta */
+            $jobMeta = $job->getAttachedEntity(JobMetaData::class);
+
+            if ($job->isActive() && !$jobMeta) {
+                $jobs[] = $job;
+                continue;
+            }
+
+            if (
+                !$jobMeta
+                || $jobMeta->hasStatus(JobMetaStatus::PENDING_OFFLINE)
+                || $jobMeta->hasStatus(JobMetaStatus::PENDING_ONLINE)
+                || ($jobMeta->hasStatus(JobMetaStatus::OFFLINE) && !$job->isActive())
+                || ($jobMeta->hasStatus(JobMetaStatus::ONLINE) && $job->isActive())
+            ) {
+                continue;
+            }
+
+            $jobs[] = $job;
+        }
+
+        $this->repository->getDocumentManager()->clear();
+        return $jobs;
     }
 }
