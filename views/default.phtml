@@ -82,17 +82,22 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
             <?php endif ?>
             </JobPositionTitle>
             <?php if (isset($extraData['AlternativeJobPositionTitle'])): ?>
-            <AlternativeJobPositionTitle>
+
                 <?php $altCount = 0; foreach ($extraData['AlternativeJobPositionTitle'] as $alt): ?>
+
                     <?php if (isset($alt['TitleCode'])): ?>
-                    <TitleCode><?= $alt['TitleCode']?></TitleCode>
-                    <?php endif ?>
-                    <?php if (isset($alt['Degree'])): ?>
-                    <Degree><?=$alt['Degree']?></Degree>
+                    <AlternativeJobPositionTitle>
+                        <TitleCode><?= $alt['TitleCode']?></TitleCode>
+
+                        <?php if (isset($alt['Degree'])): ?>
+                        <Degree><?=$alt['Degree']?></Degree>
+                        <?php endif ?>
+                    </AlternativeJobPositionTitle>
                     <?php endif ?>
                     <?php if (++$altCount > 2): break; endif ?>
+
                 <?php endforeach ?>
-            </AlternativeJobPositionTitle>
+
             <?php endif ?>
 
             <JobPositionTitleDescription><![CDATA[<?=

@@ -17,6 +17,7 @@ use ExportBA\Entity\JobMetaData;
 use ExportBA\Entity\JobMetaStatus;
 use ExportBA\Filter\JobId;
 use ExportBA\Repository\JobMetaRepository;
+use Zend\Mvc\Controller\Plugin\AbstractPlugin;
 
 /**
  * TODO: description
@@ -24,7 +25,7 @@ use ExportBA\Repository\JobMetaRepository;
  * @author Mathias Gelhausen <gelhausen@cross-solution.de>
  * TODO: write tests
  */
-class AaResponseProcessor
+class AaResponseProcessor extends AbstractPlugin
 {
     private $client;
     private $queue;
@@ -71,11 +72,13 @@ class AaResponseProcessor
 
     public function process()
     {
+        $failed = [];
+
         while ($file = $this->queue->pop()) {
             echo "Process $file:\n";
             if (($responseFiles = $this->getResponseFiles($file)) === false) {
                 echo "No response files found.\n";
-                $this->queue->push($file);
+                $failed[] = $file;
                 continue;
             }
 
@@ -124,6 +127,9 @@ class AaResponseProcessor
                     $job->error($error);
                     echo 'Job [' . $id . '] has errors. Set status to ERROR' . PHP_EOL;
                 }
+            }
+            foreach ($failed as $file) {
+                $this->queue->push($file);
             }
 
             $this->metaData->getDocumentManager()->flush();

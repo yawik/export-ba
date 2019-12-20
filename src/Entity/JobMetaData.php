@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace ExportBA\Entity;
 
+use Core\Entity\EntityInterface;
+use Core\Entity\EntityTrait;
 use Core\Entity\IdentifiableEntityInterface;
 use Core\Entity\IdentifiableEntityTrait;
 use Core\Entity\ModificationDateAwareEntityInterface;
@@ -29,10 +31,12 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
  * TODO: write tests
  */
 class JobMetaData implements
+    EntityInterface,
     StatusAwareEntityInterface,
     IdentifiableEntityInterface,
     ModificationDateAwareEntityInterface
 {
+    use EntityTrait;
     use StatusAwareEntityTrait;
     use IdentifiableEntityTrait;
     use ModificationDateAwareEntityTrait;
@@ -50,6 +54,28 @@ class JobMetaData implements
      * @var string
      */
     private $jobId;
+
+    public function setStatus($state)
+    {
+        /** @noinspection PhpUndefinedClassConstantInspection */
+        $statusClass = JobMetaStatus::class;
+
+        if (is_string($state)) {
+            $state = new $statusClass($state);
+        }
+
+        if (!$state instanceof $statusClass) {
+            throw new \InvalidArgumentException(sprintf(
+                'Expected object of type %s, but recieved %s instead.',
+                $statusClass,
+                get_class($state)
+            ));
+        }
+
+        $this->status = $state;
+
+        return $this;
+    }
 
     public function setJobId(string $id)
     {
