@@ -14,9 +14,9 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Client\AaClient;
 use ExportBA\Entity\JobMetaData;
-use ExportBA\Entity\JobMetaStatus;
 use ExportBA\Filter\JobId;
-use ExportBA\Repository\JobMetaRepository;
+use Jobs\Entity\Job;
+use Jobs\Repository\Job as JobRepository;
 use Zend\Mvc\Controller\Plugin\AbstractPlugin;
 
 /**
@@ -33,17 +33,17 @@ class AaResponseProcessor extends AbstractPlugin
     private $supplierId;
     private $files = [];
     /**
-     * @var JobMetaRepository
+     * @var JobRepository
      */
-    private $metaData;
+    private $repository;
 
-    public function __construct(AaClient $client, $queue, $name, $supplierId, $metaData)
+    public function __construct(AaClient $client, $queue, $name, $supplierId, $repository)
     {
         $this->client = $client;
         $this->queue = $queue;
         $this->supplierId = $supplierId;
         $this->name = $name;
-        $this->metaData = $metaData;
+        $this->respository = $repository;
         $this->init();
     }
 
@@ -76,7 +76,8 @@ class AaResponseProcessor extends AbstractPlugin
 
         while ($file = $this->queue->pop()) {
             echo "Process $file:\n";
-            if (($responseFiles = $this->getResponseFiles($file)) === false) {
+            [$responseFiles, $uploadDate] = $this->getResponseFiles($file);
+            if ($responseFiles === false) {
                 echo "No response files found.\n";
                 $failed[] = $file;
                 continue;
@@ -107,41 +108,55 @@ class AaResponseProcessor extends AbstractPlugin
                     $error = (string) $errXml->AdditionalInformation;
                     $id = JobId::fromAaId($aaId);
 
-                    /** @var JobMetaData $job */
-                    $job = $this->metaData->findOneBy(['jobId' => $id]);
+                    /** @var Job $job */
+                    $job = $this->repository->find($id);
                     if (!$job) {
-                        echo 'No job data for id ', $id, PHP_EOL;
+                        echo 'No job for id ', $id, PHP_EOL;
+                        continue;
+                    }
+                    $meta = JobMetaData::fromJob($job);
+
+                    if ($errXml->ErrorCode == 'FLR_DataStore_130') {
+                        if ($meta->isPendingOffline()) {
+                            echo "Job [ $id ] already deleted. update status to OFFLINE.\n";
+                            $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Was already offline on AA.')->storeIn($job);
+                        } elseif ($meta->isPendingOnline()) {
+                            echo "Job [ $id ] does not exist on AA. Set status to NEW.\n";
+                            $meta->withStatus(JobMetaData::STATUS_NEW, 'Did not exist on AA yet.')->storeIn($job);
+                        }
                         continue;
                     }
 
-                    if ($errXml->ErrorCode == 'FLR_DataStore_130') {
-                        if ($job->hasStatus(JobMetaStatus::PENDING_OFFLINE)) {
-                            echo "Job [ $id ] already deleted. update status to OFFLINE.\n";
-                            $job->updateStatus(JobMetaStatus::OFFLINE, 'Was already offline on AA.');
-                        } elseif ($job->hasStatus(JobMetaStatus::PENDING_ONLINE)) {
-                            echo "Job [ $id ] does not exist on AA. Remove this meta data to treat as new.\n";
-                            $this->metaData->remove($job);
-                        }
-                    }
-
-                    $job->error($error);
+                    $meta->withStatus(JobMetaData::STATUS_ERROR, $error)->storeIn($job);
                     echo 'Job [' . $id . '] has errors. Set status to ERROR' . PHP_EOL;
                 }
             }
-            foreach ($failed as $file) {
-                $this->queue->push($file);
-            }
 
-            $this->metaData->getDocumentManager()->flush();
+            $this->repository->getDocumentManager()->flush();
 
             echo "-- Process valid jobs\n";
-            $jobs = $this->metaData->findBy(['status.name' => JobMetaStatus::PENDING_ONLINE]);
+            $jobs = $this->repository->createQueryBuilder()
+                ->field('metaData.' . JobMetaData::KEY . '.status')->in([
+                    JobMetaData::STATUS_PENDING_ONLINE,
+                    JobMetaData::STATUS_PENDING_OFFLINE,
+                ])
+                ->field('metaData.' . JobMetaData::KEY . '.uploadDate')->equals($uploadDate)
+                ->getQuery()->execute();
+
             foreach ($jobs as $job) {
-                /** @var \ExportBA\Entity\JobMetaData $job */
-                echo "Job {$job->getJobId()} is online.\n";
-                $job->receive();
+                $meta = JobMetaData::fromJob($job);
+                $meta->receive()->storeIn($job);
+                echo 'Job [ ' . $job->getId . ' ] is ' . ($meta->isOnline() ? 'online' : 'offline') . PHP_EOL;
             }
+
+            $this->repository->getDocumentManager()->flush();
         }
+
+        foreach ($failed as $file) {
+            $this->queue->push($file);
+        }
+
+        $this->repository->getDocumentManager()->flush();
     }
 
     private function getResponseFiles($file)
@@ -157,6 +172,6 @@ class AaResponseProcessor extends AbstractPlugin
             }
         }
 
-        return $files ?: false;
+        return [$files ?: false, $date];
     }
 }

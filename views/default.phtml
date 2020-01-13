@@ -6,7 +6,10 @@ use ExportBA\Entity\SimpleImportMetaDataProxy;
 use ExportBA\Filter\JobId;
 use SimpleImport\Entity\JobMetaData as SIData;
 
-echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
+echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
+$siExists = class_exists(SIData::class);
+$siProxy = new class () { public function get($k, $v = null) { return $v; }};
+?>
 <HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Header>
     <SupplierId><?=$supplierId?></SupplierId>
@@ -18,11 +21,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
     <?php $ItemsToDelete = [] ?>
 <?php /** @var \Jobs\Entity\Job $job */ foreach ($jobs as $job):
     /** @var JobMetaData $meta */
-    $meta = $job->getAttachedEntity(JobMetaData::class);
-    if (!$meta) {
-        $meta = $job->createAttachedEntity(JobMetaData::class, ['jobId' => $job->getId(), 'status' => 'new']);
-    }
-    $extraData = (new SimpleImportMetaDataProxy($job))->getData();?>
+    $meta = JobMetaData::fromJob($job);
+    $extraData = $siExists ? SIData::fromJob($job) : $siProxy;?>
     <?php if ($job->isActive() && $meta->mustProcess()):?>
     <JobPositionPosting>
         <JobPositionPostingId><?=JobId::toAaId($job->getId(), $partnerNr)?></JobPositionPostingId>
@@ -39,8 +39,8 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
 
        <PostDetail>
 
-       <?php if ($date = $extraData['StartDate'] ?? null):?>
-            <StartDate><?=$extraData['StartDate']?></StartDate>
+       <?php if ($date = $extraData->get('StartDate')):?>
+            <StartDate><?=$date?></StartDate>
 
        <?php elseif ($date = $job->getDatePublishStart()):?>
            <StartDate><?=$date->format('Y-m-d')?></StartDate>
@@ -52,7 +52,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
            <LastModificationDate><?=$date->format('c')?></LastModificationDate>
         <?php endif?>
            <Status>1</Status>
-           <Action><?=2 //$meta->isOnline() ? 2 : 1?></Action>
+           <Action><?=$meta->isNew() ? 1 : 2?></Action>
            <SupplierId><?=$supplierId?></SupplierId>
            <SupplierName>stellenmarkt.de</SupplierName>
            <SupplierIndustrie>1</SupplierIndustrie>
@@ -71,19 +71,19 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
         </PostDetail>
         <JobPositionInformation>
             <JobPositionTitle>
-            <?php if (isset($extraData['JobPositionTitle']['TitleCode'])): ?>
-                <TitleCode><?=$extraData['JobPositionTitle']['TitleCode']?></TitleCode>
-                <?php if (isset($extraData['JobPositionTitle']['Degree'])): ?>
-                <Degree><?=$extraData['JobPositionTitle']['Degree']?></Degree>
+            <?php if ($title = $extraData->get('JobPositionTitle', [])['TitleCode']): ?>
+                <TitleCode><?=$title?></TitleCode>
+                <?php if ($degree = $extraData->get('JobPositionTitle')['Degree']): ?>
+                <Degree><?=$degree?></Degree>
                 <?php endif ?>
             <?php else: ?>
 
                 <TitleCode><?=$this->titleCode($job->getTitle())?></TitleCode>
             <?php endif ?>
             </JobPositionTitle>
-            <?php if (isset($extraData['AlternativeJobPositionTitle'])): ?>
+            <?php if ($altTitles = $extraData->get('AlternativeJobPositionTitle')): ?>
 
-                <?php $altCount = 0; foreach ($extraData['AlternativeJobPositionTitle'] as $alt): ?>
+                <?php $altCount = 0; foreach ($altTitles as $alt): ?>
 
                     <?php if (isset($alt['TitleCode'])): ?>
                     <AlternativeJobPositionTitle>
@@ -101,23 +101,23 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
             <?php endif ?>
 
             <JobPositionTitleDescription><![CDATA[<?=
-                $extraData['JobPositionTitleDescription'] ?? mb_substr($job->getTitle(),0, 58)?>]]></JobPositionTitleDescription>
+                $extraData->get('JobPositionTitleDescription') ?? mb_substr($job->getTitle(),0, 58)?>]]></JobPositionTitleDescription>
             <JobOfferType>1</JobOfferType>
-            <SocialInsurance><?=$extraData['SocialInsurance'] ?? 1?></SocialInsurance>
+            <SocialInsurance><?=$extraData->get('SocialInsurance') ?? 1?></SocialInsurance>
 
 <?php if ($description = $job->getTemplateValues()->getHtml()):?>
             <Objective><![CDATA[<?=mb_substr($description, 0, 3995)?>]]></Objective>
 <?php endif; ?>
             <EducationAuthorisation>1</EducationAuthorisation>
              <JobPositionDescription>
-                 <?php if (isset($extraData['Location'])): ?>
+                 <?php $locationsCount = 0; if ($extraLocation = $extraData->get('Location')): ?>
                  <JobPositionLocation>
                     <Location>
                         <?php foreach (['CountryCode', 'Region', 'PostalCode', 'City' => 'Municipality'] as $name => $tag):
                             if (is_numeric($name)) { $name = $tag; }
-                            if (!isset($extraData['Location'][$name])) { continue; }
-                            echo "<$tag>" . $extraData['Location'][$name] . "</$tag>";
-                        endforeach ?>
+                            if (!isset($extraLocation[$name]) || empty($extraLocation[$name])) { continue; }
+                            echo "<$tag>" . $extraLocation[$name] . "</$tag>";
+                        endforeach; $locationsCount++; ?>
                     </Location>
                  </JobPositionLocation>
                 <?php else: $locations = $job->getLocations(); if (count($locations)):?>
@@ -128,9 +128,9 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                         <PostalCode><?php echo $location->getPostalCode() ?></PostalCode>
                         <Municipality><![CDATA[<?=substr($location->getCity(),0,35) ?>]]></Municipality>
                     </Location>
-                    <?php endforeach?>
+                    <?php $locationsCount++; endforeach?>
                 </JobPositionLocation>
-                 <?php else: ?>
+                 <?php else: $locationsCount++; ?>
                      <JobPositionLocation>
                          <Location><CountryCode>DE</CountryCode></Location>
                      </JobPositionLocation>
@@ -151,14 +151,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL; ?>
                     </EducationQualifs>
                 </QualificationsRequired>
             </JobPositionRequirements>
-            <NumberToFill><?= count($locations)?></NumberToFill>
-            <AssignmentStartDate><?=$extraData['AssignmentStartDate'] ?? date('Y-m-d', time() + 24*60*60)?></AssignmentStartDate>
+            <NumberToFill><?= $locationsCount ?: 1?></NumberToFill>
+            <AssignmentStartDate><?=$extraData->get('AssignmentStartDate') ?? date('Y-m-d', time() + 24*60*60)?></AssignmentStartDate>
         </JobPositionInformation>
     </JobPositionPosting>
-    <?php $meta->commit(); $this->processed->count++;else:?>
-    <?php if (!$meta->hasStatus('new') && !$meta->hasStatus(JobMetaStatus::OFFLINE) && $meta->mustProcess()):
-        $ItemsToDelete[] = $partnerNr . '-' . $job->getId() . '-S';
-        $meta->updateStatus(JobMetaStatus::OFFLINE, 'Job is expired.')->commit();
+    <?php $meta->commit()->storeIn($job); $this->processed->count++;else:?>
+    <?php if (!$meta->isNew() && !$meta->isOffline() && $meta->mustProcess()):
+        $ItemsToDelete[] = JobId::toAaId($job->getId(), $partnerNr);
+        $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Job is expired.')->commit()->storeIn($job);
         $this->processed->count++;
     endif;?>
     <?php endif; ?>

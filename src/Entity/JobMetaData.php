@@ -12,136 +12,165 @@ declare(strict_types=1);
 
 namespace ExportBA\Entity;
 
-use Core\Entity\EntityInterface;
-use Core\Entity\EntityTrait;
-use Core\Entity\IdentifiableEntityInterface;
-use Core\Entity\IdentifiableEntityTrait;
-use Core\Entity\ModificationDateAwareEntityInterface;
-use Core\Entity\ModificationDateAwareEntityTrait;
-use Core\Entity\Status\StatusAwareEntityInterface;
-use Core\Entity\Status\StatusAwareEntityTrait;
 use DateTime;
-use Doctrine\ODM\MongoDB\Mapping\Annotations as ODM;
+use ExportBA\Assert;
+use Jobs\Entity\JobInterface;
 
 /**
+ * TODO: description
  *
- * @ODM\Document(collection="exportBA.jobmeta", repositoryClass="ExportBA\Repository\JobMetaRepository)
- * @ODM\HasLifecyclaCallbacks
  * @author Mathias Gelhausen <gelhausen@cross-solution.de>
  * TODO: write tests
  */
-class JobMetaData implements
-    EntityInterface,
-    StatusAwareEntityInterface,
-    IdentifiableEntityInterface,
-    ModificationDateAwareEntityInterface
+class JobMetaData
 {
-    use EntityTrait;
-    use StatusAwareEntityTrait;
-    use IdentifiableEntityTrait;
-    use ModificationDateAwareEntityTrait;
+    public const KEY = 'exportBA';
+    public const STATUS_NEW = 'new';
+    public const STATUS_PENDING_ONLINE = 'pending-online';
+    public const STATUS_ONLINE = 'online';
+    public const STATUS_PENDING_OFFLINE = 'pending-offline';
+    public const STATUS_OFFLINE = 'offline';
+    public const STATUS_ERROR = 'error';
 
-    public const STATUS_ENTITY_CLASS = JobMetaStatus::class;
-
-    /**
-     * @ODM\Field(type="collection")
-     * @var array
-     */
+    private $uploadDate;
+    private $status = self::STATUS_NEW;
     private $messages = [];
 
-    /**
-     * @ODM\Field(type="string")
-     * @var string
-     */
-    private $jobId;
-
-    public function setStatus($state)
+    public static function fromJob(JobInterface $job)
     {
-        /** @noinspection PhpUndefinedClassConstantInspection */
-        $statusClass = JobMetaStatus::class;
+        $data = $job->getMetaData(static::KEY) ?? [];
 
-        if (is_string($state)) {
-            $state = new $statusClass($state);
-        }
-
-        if (!$state instanceof $statusClass) {
-            throw new \InvalidArgumentException(sprintf(
-                'Expected object of type %s, but recieved %s instead.',
-                $statusClass,
-                get_class($state)
-            ));
-        }
-
-        $this->status = $state;
-
-        return $this;
+        return new self(
+            $data['status'] ?? self::STATUS_NEW,
+            $data['messages'] ?? [],
+            $data['uploadDate'] ?? null
+        );
     }
 
-    public function setJobId(string $id)
+    private function __construct(string $status, array $messages = [], ?string $uploadDate = null)
     {
-        $this->jobId = $id;
+        Assert::that(null)->nullOrString()->oneOf([
+                self::STATUS_NEW,
+                self::STATUS_PENDING_ONLINE,
+                self::STATUS_ONLINE,
+                self::STATUS_PENDING_OFFLINE,
+                self::STATUS_OFFLINE,
+                self::STATUS_ERROR
+        ]);
+
+        $this->status = $status;
+        $this->messages = $messages;
+        $this->uploadDate = $uploadDate;
     }
 
-    public function getJobId()
+    public function isNew(): bool
     {
-        return $this->jobId;
+        return $this->status == self::STATUS_NEW;
+    }
+
+    public function isOnline(): bool
+    {
+        return $this->status == self::STATUS_ONLINE;
+    }
+
+    public function isOffline(): bool
+    {
+        return $this->status == self::STATUS_OFFLINE;
+    }
+
+    public function isPendingOnline(): bool
+    {
+        return $this->status == self::STATUS_PENDING_ONLINE;
+    }
+
+    public function isPendingOffline(): bool
+    {
+        return $this->status == self::STATUS_PENDING_OFFLINE;
     }
 
     public function mustProcess(): bool
     {
         return
-            !$this->hasStatus(JobMetaStatus::PENDING_OFFLINE)
-            && !$this->hasStatus(JobMetaStatus::PENDING_ONLINE)
-            && !$this->hasStatus(JobMetaStatus::ERROR)
+            !$this->isPendingOffline()
+            && !$this->isPendingOnline()
+            && !$this->isError()
         ;
+    }
+
+    public function isError(): bool
+    {
+        return $this->status == self::STATUS_ERROR;
     }
 
     public function commit(?string $message = 'Send to BA.'): self
     {
         $status =
-            $this->hasStatus(JobMetaStatus::NEW)
-            || $this->hasStatus(JobMetaStatus::ONLINE)
-            || $this->hasStatus(JobMetaStatus::ERROR)
-            ? JobMetaStatus::PENDING_ONLINE
-            : JobMetaStatus::PENDING_OFFLINE
+            $this->isNew() || $this->isOnline() || $this->isError()
+            ? self::STATUS_PENDING_ONLINE
+            : self::STATUS_PENDING_OFFLINE
         ;
 
-        return $this->updateStatus($status, $message);
+        return $this->withStatus($status, $message);
     }
 
     public function receive(?string $message = null): self
     {
-        if ($this->hasStatus(JobMetaStatus::PENDING_ONLINE)) {
-            return $this->updateStatus(
-                JobMetaStatus::ONLINE,
+        if ($this->isPendingOnline()) {
+            return $this->withStatus(
+                self::STATUS_ONLINE,
                 $message ?? 'Successfully received by BA. now online.'
             );
         }
 
-        return $this->updateStatus(
-            JobMetaStatus::OFFLINE,
+        return $this->withStatus(
+            self::STATUS_OFFLINE,
             $message ?? 'Successfully deleted by BA. now offline.'
         );
     }
 
     public function error(string $message): self
     {
-        return $this->updateStatus(JobMetaStatus::ERROR, $message);
+        return $this->withStatus(self::STATUS_ERROR, $message);
     }
 
-    public function updateStatus(string $status, string $message): self
+    public function storeIn(JobInterface $job): void
     {
-        $originalStatus = (string) $this->getStatus();
-
-        $this->setStatus($status);
-        $this->messages[] = sprintf(
-            '%s: [%s -> %s] %s',
-            (new DateTime())->format('Y-m-d H:i:s T(O)'),
-            $originalStatus,
-            (string) $status,
-            $message
+        $job->setMetaData(
+            static::KEY,
+            [
+                'status' => $this->status,
+                'messages' => $this->messages,
+                'uploadDate' => $this->uploadDate,
+            ]
         );
+    }
 
-        return $this;
+    public function lastStatusDate()
+    {
+        $status = array_pop($this->messages);
+
+        if (!$status) {
+            return new DateTime();
+        }
+
+        return new DateTime($status[0]);
+    }
+
+    public function withStatus(string $status, string $message): self
+    {
+        $originalStatus = $this->status;
+        $data = clone $this;
+        $data->status = $status;
+        $data->messages[] = [
+            (new DateTime())->format('c'),
+            sprintf(
+                '[%s -> %s] %s',
+                $originalStatus,
+                $status,
+                $message
+            )
+        ];
+
+        return $data;
     }
 }

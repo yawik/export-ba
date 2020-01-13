@@ -43,25 +43,33 @@ class OrganizationJobFetcher implements JobFetcherInterface
             StatusInterface::EXPIRED,
             StatusInterface::INACTIVE,
         ]);
+        $qb->addAnd(
+            $qb->expr()->addOr([
+                $qb->expr()->field('status.metaData.' . JobMetaData::KEY)->exists(false),
+                $qb->expr()->field('status.metaData.' . JobMetaData::KEY . '.status')->in([
+                    JobMetaData::STATUS_NEW,
+                    JobMetaData::STATUS_ONLINE,
+                    JobMetaData::STATUS_OFFLINE,
+                ])
+            ])
+        );
 
 
         $jobs = [];
         /** @var \Jobs\Entity\Job $job */
         foreach ($qb->getQuery()->execute() as $job) {
             /** @var JobMetaData $jobMeta */
-            $jobMeta = $job->getAttachedEntity(JobMetaData::class);
+            $jobMeta = JobMetaData::fromJob($job);
 
-            if ($job->isActive() && !$jobMeta) {
+            if ($job->isActive() && $jobMeta->isNew()) {
                 $jobs[] = $job;
                 continue;
             }
 
             if (
-                !$jobMeta
-                || $jobMeta->hasStatus(JobMetaStatus::PENDING_OFFLINE)
-                || $jobMeta->hasStatus(JobMetaStatus::PENDING_ONLINE)
-                || ($jobMeta->hasStatus(JobMetaStatus::OFFLINE) && !$job->isActive())
-                || ($jobMeta->hasStatus(JobMetaStatus::ONLINE) && $job->isActive())
+                $jobMeta->isNew()
+                || ($jobMeta->isOffline() && !$job->isActive())
+                || ($jobMeta->isOnline() && $job->isActive() && $job->getDateModified() <= $jobMeta->lastStatusDate())
             ) {
                 continue;
             }
@@ -69,7 +77,6 @@ class OrganizationJobFetcher implements JobFetcherInterface
             $jobs[] = $job;
         }
 
-        $this->repository->getDocumentManager()->clear();
         return $jobs;
     }
 }
