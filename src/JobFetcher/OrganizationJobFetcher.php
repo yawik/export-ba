@@ -44,14 +44,15 @@ class OrganizationJobFetcher implements JobFetcherInterface
             StatusInterface::INACTIVE,
         ]);
         $qb->addAnd(
-            $qb->expr()->addOr([
-                $qb->expr()->field('status.metaData.' . JobMetaData::KEY)->exists(false),
+            $qb->expr()
+            ->addOr($qb->expr()->field('status.metaData.' . JobMetaData::KEY)->exists(false))
+            ->addOr(
                 $qb->expr()->field('status.metaData.' . JobMetaData::KEY . '.status')->in([
                     JobMetaData::STATUS_NEW,
                     JobMetaData::STATUS_ONLINE,
                     JobMetaData::STATUS_OFFLINE,
                 ])
-            ])
+            )
         );
 
 
