@@ -43,7 +43,7 @@ class AaResponseProcessor extends AbstractPlugin
         $this->queue = $queue;
         $this->supplierId = $supplierId;
         $this->name = $name;
-        $this->respository = $repository;
+        $this->repository = $repository;
         $this->init();
     }
 
@@ -54,7 +54,7 @@ class AaResponseProcessor extends AbstractPlugin
         $html = $this->client->get();
 
         $dom = new \DomDocument("1.0", 'UTF-8');
-        $dom->loadHTML($html['html']);
+        $dom->loadHTML($html['result']);
 
         foreach ($dom->getElementsByTagName('a') as $node) {
             /** @var \DOMElement $node */
@@ -62,7 +62,7 @@ class AaResponseProcessor extends AbstractPlugin
                 continue;
             }
             $href = $node->getAttribute('href');
-            if (strpos($href, 'ESP' . $this->supplierId . '_') !== 0) {
+            if (strpos($href, 'ES' . $this->supplierId . '_') !== 0) {
                 continue;
             }
 
@@ -86,9 +86,10 @@ class AaResponseProcessor extends AbstractPlugin
             foreach ($responseFiles as $responseFile) {
                 echo "-- Response file: $responseFile \n";
                 $responseFile = $this->client->download($responseFile);
+                // phpcs:ignore
                 if (!$responseFile) { continue; }
 
-                $content = file_get_contents($responseFile);
+                $content = file_get_contents($responseFile['file']);
 
                 if ('' == trim($content)) {
                     continue;
@@ -127,6 +128,12 @@ class AaResponseProcessor extends AbstractPlugin
                         continue;
                     }
 
+                    if ($errXml->ErrorCode == 'FLR_DataStore_110') {
+                        echo "Job [ $id ] already online. Set actrion to update.\n";
+                        $meta->withStatus(JobMetaData::STATUS_ONLINE, 'Already online on AA.')->storeIn($job);
+                        continue;
+                    }
+
                     $meta->withStatus(JobMetaData::STATUS_ERROR, $error)->storeIn($job);
                     echo 'Job [' . $id . '] has errors. Set status to ERROR' . PHP_EOL;
                 }
@@ -162,8 +169,8 @@ class AaResponseProcessor extends AbstractPlugin
     private function getResponseFiles($file)
     {
         $files = [];
-        [0 => $prefix, 1 => $date] = explode('_', $file);
-        $prefix = str_replace('DS', 'ESP', $prefix) . '_' . $date;
+        [0 => $prefix, 1 => $date, 2 => $time] = explode('_', basename($file));
+        $prefix = str_replace('DS', 'ES', $prefix) . '_' . $date . '_' . $time;
 
         foreach ($this->files as $responseFile) {
             if (strpos($responseFile, $prefix) === 0) {
@@ -172,6 +179,6 @@ class AaResponseProcessor extends AbstractPlugin
             }
         }
 
-        return [$files ?: false, $date];
+        return [$files ?: false, "{$date}_{$time}"];
     }
 }

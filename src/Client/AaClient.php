@@ -89,17 +89,23 @@ class AaClient
         return $this->query();
     }
 
-    public function download($path, $overwrite=false)
+    public function download($path, $overwrite = false)
     {
         $this->setUrl($path);
 
-        $target = $this->cachePath . 'download/' . $this->name . '/' . ltrim($path, '/');
+        $target = $this->cachePath . 'download/' . $this->name . '/';
+
+        if (!file_exists($target)) {
+            mkdir($target, 0777, true);
+        }
+
+        $target .= ltrim($path, '/');
 
         if (file_exists($target) && !$overwrite) {
             return false;
         }
 
-        $fp = fopen ($target, 'w');
+        $fp = fopen($target, 'w');
 
         curl_setopt($this->curl, CURLOPT_FILE, $fp);
         curl_setopt($this->curl, CURLOPT_TIMEOUT, 50);

@@ -14,7 +14,6 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Entity\FileQueue;
 use ExportBA\Entity\JobMetaData;
-use ExportBA\Repository\JobMetaRepository;
 use Zend\Mvc\Controller\Plugin\AbstractPlugin;
 use Zend\View\Renderer\RendererInterface;
 
@@ -53,7 +52,7 @@ class AaXml extends AbstractPlugin
     {
         //phpcs:ignore
         //$jobs = array_map(function ($x) { return new AaJob($x); }, $jobs);
-        $processed = new \stdClass;
+        $processed = new \stdClass();
         $processed->count = 0;
 
         $content = $this->renderer->render(
@@ -74,13 +73,13 @@ class AaXml extends AbstractPlugin
             mkdir($this->path, 0777, true);
         }
 
-        $uploadDate = date('Y-m-d H:i:s');
+        $uploadDate = date('Y-m-d_H-i-s');
         $file = $this->path . 'DS' . $this->supplierId . '_' . $uploadDate . '_D000E.XML';
         file_put_contents($file, $content);
         $this->queue->push($file);
 
         foreach ($jobs as $job) {
-            JobMetaData::fromJob($job)->setUploadDate($uploadDate)->storeIn($job);
+            JobMetaData::fromJob($job)->withUploadDate($uploadDate)->storeIn($job);
         }
         return [$file];
     }

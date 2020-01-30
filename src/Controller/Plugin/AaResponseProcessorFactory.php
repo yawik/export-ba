@@ -9,6 +9,7 @@
  */
 
 declare(strict_types=1);
+
 namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Client\AaClient;

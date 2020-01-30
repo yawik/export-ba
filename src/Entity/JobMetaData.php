@@ -63,6 +63,14 @@ class JobMetaData
         $this->uploadDate = $uploadDate;
     }
 
+    public function withUploadDate(string $date): self
+    {
+        $data = clone $this;
+        $data->uploadDate = $date;
+
+        return $data;
+    }
+
     public function isNew(): bool
     {
         return $this->status == self::STATUS_NEW;
