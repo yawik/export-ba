@@ -141,7 +141,7 @@ class JobMetaData
         return $this->withStatus(self::STATUS_ERROR, $message);
     }
 
-    public function storeIn(JobInterface $job): void
+    public function storeIn(JobInterface $job): self
     {
         $job->setMetaData(
             static::KEY,
@@ -151,6 +151,8 @@ class JobMetaData
                 'uploadDate' => $this->uploadDate,
             ]
         );
+
+        return $this;
     }
 
     public function lastStatusDate()

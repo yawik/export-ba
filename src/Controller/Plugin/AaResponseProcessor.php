@@ -152,8 +152,8 @@ class AaResponseProcessor extends AbstractPlugin
 
             foreach ($jobs as $job) {
                 $meta = JobMetaData::fromJob($job);
-                $meta->receive()->storeIn($job);
-                echo 'Job [ ' . $job->getId . ' ] is ' . ($meta->isOnline() ? 'online' : 'offline') . PHP_EOL;
+                $meta = $meta->receive()->storeIn($job);
+                echo 'Job [ ' . $job->getId() . ' ] is ' . ($meta->isOnline() ? 'online' : 'offline') . PHP_EOL;
             }
 
             $this->repository->getDocumentManager()->flush();
