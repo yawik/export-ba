@@ -16,7 +16,7 @@ use ExportBA\Assert;
 use ExportBA\Entity\JobMetaData;
 use Jobs\Entity\JobInterface;
 use Jobs\Entity\StatusInterface;
-use Zend\Filter\FilterInterface;
+use Laminas\Filter\FilterInterface;
 
 /**
  * TODO: description

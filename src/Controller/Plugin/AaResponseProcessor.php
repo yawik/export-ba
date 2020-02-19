@@ -17,7 +17,7 @@ use ExportBA\Entity\JobMetaData;
 use ExportBA\Filter\JobId;
 use Jobs\Entity\Job;
 use Jobs\Repository\Job as JobRepository;
-use Zend\Mvc\Controller\Plugin\AbstractPlugin;
+use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 
 /**
  * TODO: description
