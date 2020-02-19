@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\Controller\Plugin;
 
-use Zend\Mvc\Controller\Plugin\AbstractPlugin;
+use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 
 /**
  * TODO: description

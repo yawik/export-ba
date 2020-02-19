@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace ExportBA;
 
-use Zend\ServiceManager\Factory\InvokableFactory;
+use Laminas\ServiceManager\Factory\InvokableFactory;
 
 return [
     'doctrine' => [

@@ -16,10 +16,10 @@ namespace ExportBA;
 use Core\ModuleManager\Feature\VersionProviderInterface;
 use Core\ModuleManager\Feature\VersionProviderTrait;
 use Core\ModuleManager\ModuleConfigLoader;
-use Zend\Console\Adapter\AdapterInterface as Console;
-use Zend\ModuleManager\Feature\ConsoleBannerProviderInterface;
-use Zend\ModuleManager\Feature\ConsoleUsageProviderInterface;
-use Zend\ModuleManager\Feature\DependencyIndicatorInterface;
+use Laminas\Console\Adapter\AdapterInterface as Console;
+use Laminas\ModuleManager\Feature\ConsoleBannerProviderInterface;
+use Laminas\ModuleManager\Feature\ConsoleUsageProviderInterface;
+use Laminas\ModuleManager\Feature\DependencyIndicatorInterface;
 
 /**
  * Bootstrap module
@@ -32,7 +32,7 @@ class Module implements
 {
     use VersionProviderTrait;
 
-    public const VERSION = '0.0.0';
+    public const VERSION = '0.1.0';
 
     /**
      * Loads module specific configuration.

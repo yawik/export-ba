@@ -14,7 +14,7 @@ namespace ExportBA\Controller\Plugin;
 use ExportBA\Entity\FileQueue;
 use ExportBA\Options\AaOptions;
 use Interop\Container\ContainerInterface;
-use Zend\View\Renderer\PhpRenderer;
+use Laminas\View\Renderer\PhpRenderer;
 
 /**
  * Factory for \ExportBA\Controller\Plugin\AaXml
@@ -31,7 +31,7 @@ class AaXmlFactory
     ): AaXml {
 
         $renderer = new PhpRenderer();
-        $resolver = new \Zend\View\Resolver\TemplateMapResolver(
+        $resolver = new \Laminas\View\Resolver\TemplateMapResolver(
             $container->get('config')['view_manager']['template_map']
         );
         $renderer->setResolver($resolver);

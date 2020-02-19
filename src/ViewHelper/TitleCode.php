@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\ViewHelper;
 
-use Zend\View\Helper\AbstractHelper;
+use Laminas\View\Helper\AbstractHelper;
 
 /**
  * TODO: description

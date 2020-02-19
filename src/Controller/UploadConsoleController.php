@@ -15,7 +15,7 @@ namespace ExportBA\Controller;
 use ExportBA\Client\AaClient;
 use ExportBA\Controller\Plugin\AaXml;
 use ExportBA\Controller\Plugin\JobFetcher;
-use Zend\Mvc\Console\Controller\AbstractConsoleController;
+use Laminas\Mvc\Console\Controller\AbstractConsoleController;
 
 /**
  * TODO: description

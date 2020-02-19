@@ -12,7 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\Options;
 
-use Zend\Stdlib\AbstractOptions;
+use Laminas\Stdlib\AbstractOptions;
 
 /**
  * TODO: description

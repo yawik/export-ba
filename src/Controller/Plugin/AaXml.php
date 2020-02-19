@@ -14,8 +14,8 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Entity\FileQueue;
 use ExportBA\Entity\JobMetaData;
-use Zend\Mvc\Controller\Plugin\AbstractPlugin;
-use Zend\View\Renderer\RendererInterface;
+use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
+use Laminas\View\Renderer\RendererInterface;
 
 /**
  * TODO: description
