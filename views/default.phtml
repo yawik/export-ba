@@ -23,7 +23,10 @@ $siProxy = new class () { public function get($k, $v = null) { return $v; }};
     /** @var JobMetaData $meta */
     $meta = JobMetaData::fromJob($job);
     $extraData = $siExists ? SIData::fromJob($job) : $siProxy;?>
-    <?php if ($job->isActive() && $meta->mustProcess()):?>
+    <?php if ($job->isActive() && $meta->mustProcess()):
+        if ($meta->isOffline()):
+            $meta=$meta->withStatus(JobMetaData::STATUS_NEW, 'Reactiveated.');
+          endif;?>
     <JobPositionPosting>
         <JobPositionPostingId><?=JobId::toAaId($job->getId(), $partnerNr)?></JobPositionPostingId>
         <HiringOrg>
@@ -156,9 +159,6 @@ $siProxy = new class () { public function get($k, $v = null) { return $v; }};
         </JobPositionInformation>
     </JobPositionPosting>
     <?php
-          if ($meta->isOffline()):
-            $meta=$meta->withStatus(JobMetaData::STATUS_NEW, 'Reactiveated.');
-          endif;
           $meta->commit()->storeIn($job); $this->processed->count++;else:?>
     <?php if (!$meta->isNew() && !$meta->isOffline() && $meta->mustProcess()):
         $ItemsToDelete[] = JobId::toAaId($job->getId(), $partnerNr);
