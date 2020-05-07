@@ -14,9 +14,10 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Client\AaClient;
 use ExportBA\Entity\JobMetaData;
+use ExportBA\Entity\JobMetaStatus;
 use ExportBA\Filter\JobId;
 use Jobs\Entity\Job;
-use Jobs\Repository\Job as JobRepository;
+use ExportBA\Repository\JobMetaRepository;
 use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 
 /**
@@ -33,7 +34,7 @@ class AaResponseProcessor extends AbstractPlugin
     private $supplierId;
     private $files = [];
     /**
-     * @var JobRepository
+     * @var JobMetaRepository
      */
     private $repository;
 
@@ -109,51 +110,45 @@ class AaResponseProcessor extends AbstractPlugin
                     $error = (string) $errXml->AdditionalInformation;
                     $id = JobId::fromAaId($aaId);
 
-                    /** @var Job $job */
-                    $job = $this->repository->find($id);
-                    if (!$job) {
-                        echo 'No job for id ', $id, PHP_EOL;
-                        continue;
-                    }
-                    $meta = JobMetaData::fromJob($job);
+                    /** @var \ExportBA\Entity\JobMetaData $meta */
+                    $meta = $this->repository->getMetaDataFor($id);
 
                     if ($errXml->ErrorCode == 'FLR_DataStore_130') {
-                        if ($meta->isPendingOffline()) {
-                            echo "Job [ $id ] already deleted. update status to OFFLINE.\n";
-                            $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Was already offline on AA.')->storeIn($job);
-                        } elseif ($meta->isPendingOnline()) {
-                            echo "Job [ $id ] does not exist on AA. Set status to NEW.\n";
-                            $meta->withStatus(JobMetaData::STATUS_NEW, 'Did not exist on AA yet.')->storeIn($job);
+                        if ($meta->hasStatus(JobMetaStatus::PENDING_OFFLINE)) {
+                            echo "Job [ " . $meta->getJobId() . " ] already deleted. update status to OFFLINE.\n";
+                            $meta->updateStatus(JobMetaStatus::OFFLINE, 'Was already offline on AA.');
+                        } elseif ($meta->hasStatus(JobMetaStatus::ONLINE)) {
+                            echo "Job [ " . $meta->getJobId() . " ] does not exist on AA. Set status to NEW.\n";
+                            $meta->updateStatus(JobMetaStatus::NEW, 'Did not exist on AA yet.');
                         }
                         continue;
                     }
 
                     if ($errXml->ErrorCode == 'FLR_DataStore_110') {
-                        echo "Job [ $id ] already online. Set actrion to update.\n";
-                        $meta->withStatus(JobMetaData::STATUS_ONLINE, 'Already online on AA.')->storeIn($job);
+                        echo "Job [ " . $meta->getJobId() . " ] already online. Set actrion to update.\n";
+                        $meta->updateStatus(JobMetaStatus::ONLINE, 'Already online on AA.');
                         continue;
                     }
 
-                    $meta->withStatus(JobMetaData::STATUS_ERROR, $error)->storeIn($job);
-                    echo 'Job [' . $id . '] has errors. Set status to ERROR' . PHP_EOL;
+                    $meta->error($error);
+                    echo 'Job [' . $meta->getJobId() . '] has errors. Set status to ERROR' . PHP_EOL;
                 }
             }
 
             $this->repository->getDocumentManager()->flush();
 
             echo "-- Process valid jobs\n";
-            $jobs = $this->repository->createQueryBuilder()
-                ->field('metaData.' . JobMetaData::KEY . '.status')->in([
-                    JobMetaData::STATUS_PENDING_ONLINE,
-                    JobMetaData::STATUS_PENDING_OFFLINE,
+            $metas = $this->repository->createQueryBuilder()
+                ->field('status.name')->in([
+                    JobMetaStatus::PENDING_ONLINE,
+                    JobMetaStatus::PENDING_OFFLINE,
                 ])
-                ->field('metaData.' . JobMetaData::KEY . '.uploadDate')->equals($uploadDate)
+                ->field('uploadDate')->equals($uploadDate)
                 ->getQuery()->execute();
 
-            foreach ($jobs as $job) {
-                $meta = JobMetaData::fromJob($job);
-                $meta = $meta->receive()->storeIn($job);
-                echo 'Job [ ' . $job->getId() . ' ] is ' . ($meta->isOnline() ? 'online' : 'offline') . PHP_EOL;
+            foreach ($metas as $meta) {
+                $meta = $meta->receive();
+                echo 'Job [ ' . $meta->getJobId() . ' ] is ' . ($meta->hasStatus(JobMetaStatus::ONLINE) ? 'online' : 'offline') . PHP_EOL;
             }
 
             $this->repository->getDocumentManager()->flush();

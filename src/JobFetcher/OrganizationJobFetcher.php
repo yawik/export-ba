@@ -14,6 +14,7 @@ namespace ExportBA\JobFetcher;
 
 use ExportBA\Entity\JobMetaData;
 use ExportBA\Entity\JobMetaStatus;
+use ExportBA\Repository\JobMetaRepository;
 use Jobs\Entity\StatusInterface;
 use Jobs\Repository\Job;
 
@@ -26,11 +27,16 @@ use Jobs\Repository\Job;
 class OrganizationJobFetcher implements JobFetcherInterface
 {
     private $repository;
+    /**
+     * @var JobMetaRepository
+     */
+    private $metaRepository;
     private $id;
 
-    public function __construct(Job $repository, $options)
+    public function __construct(Job $repository, JobMetaRepository $jobMeta, $options)
     {
         $this->repository = $repository;
+        $this->metaRepository = $jobMeta;
         $this->id = $options['id'] ?? null;
     }
 
@@ -43,34 +49,42 @@ class OrganizationJobFetcher implements JobFetcherInterface
             StatusInterface::EXPIRED,
             StatusInterface::INACTIVE,
         ]);
-        $qb->addAnd(
-            $qb->expr()
-            ->addOr($qb->expr()->field('status.metaData.' . JobMetaData::KEY)->exists(false))
-            ->addOr(
-                $qb->expr()->field('status.metaData.' . JobMetaData::KEY . '.status')->in([
-                    JobMetaData::STATUS_NEW,
-                    JobMetaData::STATUS_ONLINE,
-                    JobMetaData::STATUS_OFFLINE,
-                ])
-            )
-        );
+        // $qb->addAnd(
+        //     $qb->expr()
+        //     ->addOr($qb->expr()->field('status.metaData.' . JobMetaData::KEY)->exists(false))
+        //     ->addOr(
+        //         $qb->expr()->field('status.metaData.' . JobMetaData::KEY . '.status')->in([
+        //             JobMetaData::STATUS_NEW,
+        //             JobMetaData::STATUS_ONLINE,
+        //             JobMetaData::STATUS_OFFLINE,
+        //         ])
+        //     )
+        // );
 
 
         $jobs = [];
         /** @var \Jobs\Entity\Job $job */
         foreach ($qb->getQuery()->execute() as $job) {
             /** @var JobMetaData $jobMeta */
-            $jobMeta = JobMetaData::fromJob($job);
+            $jobMeta = $this->metaRepository->getMetaDataFor($job);
 
-            if ($job->isActive() && $jobMeta->isNew()) {
+            if (
+                !$jobMeta->hasStatus(JobMetaStatus::NEW)
+                && !$jobMeta->hasStatus(JobMetaStatus::ONLINE)
+                && !$jobMeta->hasStatus(JobMetaStatus::OFFLINE)
+            ) {
+                continue;
+            }
+
+            if ($job->isActive() && $jobMeta->hasStatus(JobMetaStatus::NEW)) {
                 $jobs[] = $job;
                 continue;
             }
 
             if (
-                $jobMeta->isNew()
-                || ($jobMeta->isOffline() && !$job->isActive())
-                || ($jobMeta->isOnline() && $job->isActive() && $job->getDateModified() <= $jobMeta->lastStatusDate())
+                $jobMeta->hasStatus(JobMetaStatus::NEW)
+                || ($jobMeta->hasStatus(JobMetaStatus::OFFLINE) && !$job->isActive())
+                || ($jobMeta->hasStatus(JobMetaStatus::ONLINE) && $job->isActive() && $job->getDateModified() <= $jobMeta->getDateModified())
             ) {
                 continue;
             }

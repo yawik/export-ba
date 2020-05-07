@@ -14,6 +14,7 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Entity\FileQueue;
 use ExportBA\Entity\JobMetaData;
+use ExportBA\Repository\JobMetaRepository;
 use Laminas\Mvc\Controller\Plugin\AbstractPlugin;
 use Laminas\View\Renderer\RendererInterface;
 
@@ -31,6 +32,10 @@ class AaXml extends AbstractPlugin
     private $partnerNr;
     private $template;
     private $path;
+    /**
+     * @var JobMetaRepository
+     */
+    private $repository;
 
     public function __construct(
         RendererInterface $renderer,
@@ -38,7 +43,8 @@ class AaXml extends AbstractPlugin
         $supplierId,
         $partnerNr,
         $template,
-        $path
+        $path,
+        $repository
     ) {
         $this->renderer = $renderer;
         $this->queue = $queue;
@@ -46,6 +52,7 @@ class AaXml extends AbstractPlugin
         $this->partnerNr = $partnerNr;
         $this->template = $template;
         $this->path = rtrim($path, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'upload' . DIRECTORY_SEPARATOR;
+        $this->repository = $repository;
     }
 
     public function write($jobs)
@@ -79,7 +86,7 @@ class AaXml extends AbstractPlugin
         $this->queue->push($file);
 
         foreach ($jobs as $job) {
-            JobMetaData::fromJob($job)->withUploadDate($uploadDate)->storeIn($job);
+            $this->repository->getMetaDataFor($job)->setUploadDate($uploadDate);
         }
         return [$file];
     }
