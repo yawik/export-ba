@@ -4,9 +4,6 @@
   <exclude-pattern>**/test/*</exclude-pattern>
   <exclude-pattern>**/vendor/*</exclude-pattern>
 
-  <rule ref="PSR2">
-  	<exclude name="Squiz.Functions.MultiLineFunctionDeclaration.Indent" />
-  </rule>
   <rule ref="PSR12"/>
   <rule ref="SlevomatCodingStandard.TypeHints.DeclareStrictTypes">
           <properties>

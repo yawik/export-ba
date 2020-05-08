@@ -14,9 +14,9 @@ namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Client\AaClient;
 use ExportBA\Entity\FileQueue;
+use ExportBA\Entity\JobMetaData;
 use ExportBA\Options\AaOptions;
 use Interop\Container\ContainerInterface;
-use Jobs\Entity\Job;
 
 /**
  * Factory for \ExportBA\Controller\Plugin\AaResponseProcessor
@@ -44,7 +44,7 @@ class AaResponseProcessorFactory
             $queue,
             $options['name'],
             $aaOptions->getSupplierId($options['name']),
-            $container->get('repositories')->get(Job::class)
+            $container->get('repositories')->get(JobMetaData::class)
         );
     }
 }

@@ -12,6 +12,7 @@ declare(strict_types=1);
 namespace ExportBA\Controller\Plugin;
 
 use ExportBA\Entity\FileQueue;
+use ExportBA\Entity\JobMetaData;
 use ExportBA\Options\AaOptions;
 use Interop\Container\ContainerInterface;
 use Laminas\View\Renderer\PhpRenderer;
@@ -52,7 +53,8 @@ class AaXmlFactory
             $aaOptions->getSupplierId($options['name']),
             $aaOptions->getPartnerNr($options['name']),
             $aaOptions->getTemplate($options['name']),
-            $aaOptions->getCachePath() . DIRECTORY_SEPARATOR . $options['name']
+            $aaOptions->getCachePath() . DIRECTORY_SEPARATOR . $options['name'],
+            $container->get('repositories')->get(JobMetaData::class)
         );
     }
 }

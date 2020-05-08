@@ -6,9 +6,12 @@ use ExportBA\Entity\SimpleImportMetaDataProxy;
 use ExportBA\Filter\JobId;
 use SimpleImport\Entity\JobMetaData as SIData;
 
+
 echo '<?xml version="1.0" encoding="UTF-8"?>' . PHP_EOL;
 $siExists = class_exists(SIData::class);
 $siProxy = new class () { public function get($k, $v = null) { return $v; }};
+/** @var \ExportBA\Repository\JobMetaRepository $metaRep */
+$metaRep = $this->services('repositories')->get(JobMetaData::class);
 ?>
 <HRBAXMLJobPositionPosting xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Header>
@@ -21,18 +24,18 @@ $siProxy = new class () { public function get($k, $v = null) { return $v; }};
     <?php $ItemsToDelete = [] ?>
 <?php /** @var \Jobs\Entity\Job $job */ foreach ($jobs as $job):
     /** @var JobMetaData $meta */
-    $meta = JobMetaData::fromJob($job);
+    $meta = $metaRep->getMetaDataFor($job);
     $extraData = $siExists ? SIData::fromJob($job) : $siProxy;?>
     <?php if ($job->isActive() && $meta->mustProcess()):
-        if ($meta->isOffline()):
-            $meta=$meta->withStatus(JobMetaData::STATUS_NEW, 'Reactiveated.');
+        if ($meta->hasStatus(JobMetaStatus::OFFLINE)):
+            $meta->updateStatus(JobMetaStatus::NEW, 'Reactiveated.');
           endif;?>
     <JobPositionPosting>
         <JobPositionPostingId><?=JobId::toAaId($job->getId(), $partnerNr)?></JobPositionPostingId>
         <HiringOrg>
             <HiringOrgName><![CDATA[<?php echo mb_substr($job->getOrganization()->getOrganizationName()->getName(),0, 90) ?>]]></HiringOrgName>
             <Industry>
-                <NAICS>86.10.1</NAICS>
+                <NAICS>78.30.0</NAICS>
             </Industry>
             <Contact>
                 <Salutation>1</Salutation>
@@ -55,7 +58,7 @@ $siProxy = new class () { public function get($k, $v = null) { return $v; }};
            <LastModificationDate><?=$date->format('c')?></LastModificationDate>
         <?php endif?>
            <Status>1</Status>
-           <Action><?=$meta->isNew() ? 1 : 2?></Action>
+           <Action><?=$meta->hasStatus(JobMetaStatus::NEW) ? 1 : 2?></Action>
            <SupplierId><?=$supplierId?></SupplierId>
            <SupplierName>stellenmarkt.de</SupplierName>
            <SupplierIndustrie>1</SupplierIndustrie>
@@ -159,10 +162,10 @@ $siProxy = new class () { public function get($k, $v = null) { return $v; }};
         </JobPositionInformation>
     </JobPositionPosting>
     <?php
-          $meta->commit()->storeIn($job); $this->processed->count++;else:?>
-    <?php if (!$meta->isNew() && !$meta->isOffline() && $meta->mustProcess()):
+          $meta->commit(); $this->processed->count++;else:?>
+    <?php if (!$meta->hasStatus(JobMetaStatus::NEW) && !$meta->hasStatus(JobMetaStatus::OFFLINE) && $meta->mustProcess()):
         $ItemsToDelete[] = JobId::toAaId($job->getId(), $partnerNr);
-        $meta->withStatus(JobMetaData::STATUS_OFFLINE, 'Job is expired.')->commit()->storeIn($job);
+        $meta->updateStatus(JobMetaStatus::OFFLINE, 'Job is expired.')->commit();
         $this->processed->count++;
     endif;?>
     <?php endif; ?>
