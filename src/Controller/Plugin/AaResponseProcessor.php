@@ -127,6 +127,7 @@ class AaResponseProcessor extends AbstractPlugin
                     if ($errXml->ErrorCode == 'FLR_DataStore_110') {
                         echo "Job [ " . $meta->getJobId() . " ] already online. Set actrion to update.\n";
                         $meta->updateStatus(JobMetaStatus::ONLINE, 'Already online on AA.');
+                        $meta->setForceUpdate();
                         continue;
                     }
 

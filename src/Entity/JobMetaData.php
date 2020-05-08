@@ -61,6 +61,12 @@ class JobMetaData implements
      */
     private $uploadDate;
 
+    /**
+     * @ODM\Field(type="boolean")
+     * @var bool
+     */
+    private $forceUpdate = false;
+
     public function setJobId(string $id)
     {
         $this->jobId = $id;
@@ -147,11 +153,27 @@ class JobMetaData implements
         return new \DateTime($msg[0] ?? 'now');
     }
 
-    /**
-     * Needed for conversion remove in next version.
-     */
-    public function setMessages($messages)
+    public function setForceUpdate(bool $flag = true)
     {
-        $this->messages = $messages;
+        $this->forceUpdate = $flag;
+    }
+
+    public function isForceUpdate(): bool
+    {
+        return $this->forceUpdate;
+    }
+
+    /**
+     * Returns true, if the forceUpdate Flag isset.
+     *
+     * __WARNING__: This method resets the flag to _false_
+     */
+
+    public function mustUpdate(): bool
+    {
+        $flag = $this->forceUpdate;
+        $this->forceUpdate = false;
+
+        return $flag;
     }
 }
