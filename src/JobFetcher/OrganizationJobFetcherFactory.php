@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace ExportBA\JobFetcher;
 
+use ExportBA\Entity\JobMetaData;
 use Interop\Container\ContainerInterface;
 
 /**
@@ -27,8 +28,11 @@ class OrganizationJobFetcherFactory
         ?string $requestedName = null,
         ?array $options = null
     ): OrganizationJobFetcher {
+        $repos = $container->get('repositories');
+
         return new OrganizationJobFetcher(
-            $container->get('repositories')->get('Jobs'),
+            $repos->get('Jobs'),
+            $repos->get(JobMetaData::class),
             $options
         );
     }

@@ -86,7 +86,7 @@ class OrganizationJobFetcher implements JobFetcherInterface
                 || ($jobMeta->hasStatus(JobMetaStatus::OFFLINE) && !$job->isActive())
                 || (
                     $jobMeta->hasStatus(JobMetaStatus::ONLINE)
-                    && $job->isActive() && $job->getDateModified() <= $jobMeta->getDateModified()
+                    && $job->isActive() && $job->getDateModified() < $jobMeta->getDateModified()
                     && !$jobMeta->mustUpdate()
                 )
             ) {

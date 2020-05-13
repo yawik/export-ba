@@ -125,7 +125,7 @@ class AaResponseProcessor extends AbstractPlugin
                     }
 
                     if ($errXml->ErrorCode == 'FLR_DataStore_110') {
-                        echo "Job [ " . $meta->getJobId() . " ] already online. Set actrion to update.\n";
+                        echo "Job [ " . $meta->getJobId() . " ] already online. Set action to update.\n";
                         $meta->updateStatus(JobMetaStatus::ONLINE, 'Already online on AA.');
                         $meta->setForceUpdate();
                         continue;
@@ -140,7 +140,7 @@ class AaResponseProcessor extends AbstractPlugin
 
             echo "-- Process valid jobs\n";
             $metas = $this->repository->createQueryBuilder()
-                ->field('status.name')->in([
+                ->field('status.state')->in([
                     JobMetaStatus::PENDING_ONLINE,
                     JobMetaStatus::PENDING_OFFLINE,
                 ])
