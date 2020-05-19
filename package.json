@@ -2,6 +2,7 @@
   "name": "yawik-export-ba",
   "version": "0.1.0",
   "private": false,
+  "lisence": "MIT",
   "devDependencies": {
     "yawik-core": "test/sandbox/public/modules/Core",
     "grunt": "^1.0.3",
