@@ -1,7 +1,11 @@
 ExportBA
 ========
 
-This module implements an api interface for the german "Arbeitsagentur"
+Dieses Modul exportiert Stellenanzeigen aus einer Yawik Installation an die
+"Bundesagentur für Arbeit". Um das Modul nutzen zu können benötigt man einen
+Kooperationsvertrag mit der BA.
+
+https://www.arbeitsagentur.de/datei/dok_ba015033.pdf
 
 
 Requirements

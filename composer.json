@@ -1,7 +1,7 @@
 {
     "type": "yawik-module",
     "name": "yawik/export-ba",
-    "description": "This module exports jobs to the 'Bundesagentur f\u00fcr Arbeit'",
+    "description": "Dieses Modul exportiert Stellenanzeigen aus einer yawik installation an die 'Bundesagentur für Arbeit'. Benötigt wird ein Kooperationsvertrag mit der BA",
     "license": "MIT",
     "authors": [
         {
