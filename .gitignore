@@ -4,3 +4,7 @@ behat.yml
 node_modules/
 /var/
 .phpunit.result.cache
+
+# joe's Backup files
+*~
+.*~
